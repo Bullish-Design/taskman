@@ -1,0 +1,305 @@
+# BugWarrior Configuration Example
+# Copy this to .bugwarriorrc and customize for your needs
+# Documentation: https://bugwarrior.readthedocs.io/
+
+# ============================================================================
+# General Configuration
+# ============================================================================
+
+[general]
+# List of service targets to sync from (comma-separated)
+targets = github
+
+# Shorten URLs using git.io or other shortening service
+shorten = True
+
+# How to handle links in task annotations
+inline_links = False        # Don't include links in description
+annotation_links = True     # Add links as annotations instead
+
+# Annotation options
+annotation_comments = True  # Include issue comments as annotations
+annotation_newlines = True  # Preserve newlines in annotations
+
+# Logging
+log.level = INFO
+log.file = /tmp/bugwarrior.log
+
+# Task description template
+# Available variables depend on the service
+description_template = {{githubtitle}}
+
+# ============================================================================
+# GitHub Configuration
+# ============================================================================
+
+[github]
+service = github
+
+# Authentication Method 1: Personal Access Token (RECOMMENDED)
+# Create token at: https://github.com/settings/tokens
+# Required scopes: repo, read:org, read:user
+github.token = @oracle:eval:gh auth token
+# Or hardcode (less secure):
+# github.token = ghp_YourPersonalAccessTokenHere
+
+# Authentication Method 2: Username/Password (deprecated by GitHub)
+# github.login = yourusername
+# github.password = yourpassword
+
+# What to import
+github.include_user_repos = True        # Repos you own
+github.include_user_issues = True       # Issues assigned to you
+github.involved_issues = True           # Issues you're involved in
+github.include_pull_requests = True     # Pull requests
+
+# Filter by repository (optional)
+# Only import from specific repos
+# github.include_repos = owner/repo1, owner/repo2
+# Exclude specific repos
+# github.exclude_repos = owner/junk-repo, owner/archived-repo
+
+# Filter by labels (optional)
+# Import only issues with specific labels
+# github.query = label:"in-progress" OR label:"needs-work"
+# github.filter_pull_requests = label:"needs-review"
+
+# Organization options
+# github.username = yourorgname
+# github.include_org_repos = True
+
+# Project naming in TaskWarrior
+# Available variables: {{githubrepo}}, {{githuborg}}, {{githubnamespace}}
+github.project_template = gh.{{githubrepo}}
+
+# Default priority for imported tasks
+# github.default_priority = M
+
+# Tags to add to all GitHub tasks
+github.add_tags = github
+
+# Import issue body as annotations
+github.body_length = 1000  # Truncate long bodies
+
+# ============================================================================
+# GitLab Configuration (if you use GitLab)
+# ============================================================================
+
+# [gitlab]
+# service = gitlab
+
+# # GitLab instance
+# gitlab.host = gitlab.com
+# # Or self-hosted: gitlab.host = gitlab.company.com
+
+# # Authentication
+# gitlab.token = your-gitlab-personal-access-token
+
+# # What to import
+# gitlab.include_todos = True
+# gitlab.include_merge_requests = True
+# gitlab.include_all_todos = True
+
+# # Project naming
+# gitlab.project_template = gl.{{gitlabproject}}
+
+# # Tags
+# gitlab.add_tags = gitlab
+
+# ============================================================================
+# Jira Configuration (if you use Jira)
+# ============================================================================
+
+# [jira]
+# service = jira
+
+# # Jira server
+# jira.base_uri = https://your-company.atlassian.net
+
+# # Authentication
+# jira.username = your.email@company.com
+# jira.password = your-jira-api-token
+
+# # What to import
+# # JQL query to filter issues
+# jira.query = assignee = currentUser() AND resolution = Unresolved
+
+# # Project naming
+# jira.project_template = jira.{{jiraproject}}
+
+# # Add sprint information
+# jira.add_tags = jira
+
+# ============================================================================
+# Bugzilla Configuration (if you use Bugzilla)
+# ============================================================================
+
+# [bugzilla]
+# service = bugzilla
+
+# # Bugzilla instance
+# bugzilla.base_uri = https://bugzilla.mozilla.org
+
+# # Authentication
+# bugzilla.username = your.email@example.com
+# bugzilla.password = your-password
+
+# # What to import
+# bugzilla.query = status:NEW,ASSIGNED
+
+# # Project naming
+# bugzilla.project_template = bz.{{bugzillaproduct}}
+
+# ============================================================================
+# Advanced GitHub Configuration Examples
+# ============================================================================
+
+# Example 1: Personal Open Source Work
+# [github-oss]
+# service = github
+# github.token = @oracle:eval:gh auth token
+# github.username = yourusername
+# github.include_user_repos = True
+# github.involved_issues = True
+# github.filter_pull_requests = state:open
+# github.project_template = oss.{{githubrepo}}
+# github.add_tags = github, opensource
+
+# Example 2: Work Organization
+# [github-work]
+# service = github
+# github.token = @oracle:eval:gh auth token
+# github.username = your-work-org
+# github.include_org_repos = True
+# github.involved_issues = True
+# github.include_repos = company/main-product, company/api-service
+# github.project_template = work.{{githubrepo}}
+# github.add_tags = github, work
+# github.default_priority = H
+
+# Example 3: Only High Priority Items
+# [github-urgent]
+# service = github
+# github.token = @oracle:eval:gh auth token
+# github.query = label:urgent OR label:critical
+# github.project_template = urgent.{{githubrepo}}
+# github.add_tags = github, urgent
+# github.default_priority = H
+
+# ============================================================================
+# Advanced Multi-Service Example
+# ============================================================================
+
+# [general]
+# targets = github-personal, github-work, jira-work, gitlab-oss
+
+# [github-personal]
+# service = github
+# github.token = @oracle:eval:gh auth token
+# github.username = mypersonalaccount
+# github.include_user_issues = True
+# github.project_template = personal.{{githubrepo}}
+# github.add_tags = github, personal
+
+# [github-work]
+# service = github
+# github.token = ${WORK_GITHUB_TOKEN}
+# github.username = myworkorg
+# github.include_org_repos = True
+# github.involved_issues = True
+# github.project_template = work.{{githubrepo}}
+# github.add_tags = github, work
+# github.default_priority = H
+
+# [jira-work]
+# service = jira
+# jira.base_uri = https://mycompany.atlassian.net
+# jira.username = me@company.com
+# jira.password = ${JIRA_API_TOKEN}
+# jira.query = assignee = currentUser() AND resolution = Unresolved
+# jira.project_template = jira.{{jiraproject}}
+# jira.add_tags = jira, work
+
+# [gitlab-oss]
+# service = gitlab
+# gitlab.host = gitlab.com
+# gitlab.token = ${GITLAB_TOKEN}
+# gitlab.include_todos = True
+# gitlab.project_template = oss.{{gitlabproject}}
+# gitlab.add_tags = gitlab, opensource
+
+# ============================================================================
+# Environment Variables
+# ============================================================================
+
+# You can use environment variables in the configuration:
+# github.token = ${GITHUB_TOKEN}
+# jira.password = ${JIRA_API_TOKEN}
+
+# Or use the @oracle feature to execute commands:
+# github.token = @oracle:eval:gh auth token
+# github.token = @oracle:eval:pass show github-token
+
+# Set environment variables in your shell:
+# export GITHUB_TOKEN="ghp_yourtoken"
+# export JIRA_API_TOKEN="yourtoken"
+
+# ============================================================================
+# Tips and Best Practices
+# ============================================================================
+
+# 1. Use project_template to organize imported tasks
+#    - Keep different services separate: gh.*, jira.*, gl.*
+#    - Organize by work type: work.*, personal.*, oss.*
+
+# 2. Use add_tags to make filtering easy
+#    - Tag by service: +github, +jira
+#    - Tag by context: +work, +personal
+#    - Combine: task +github +work list
+
+# 3. Use queries/filters to limit imports
+#    - Don't import everything - focus on actionable items
+#    - Use labels to control what gets synced
+#    - Filter by date to avoid importing old issues
+
+# 4. Set appropriate default_priority
+#    - Work items: priority:H
+#    - Personal projects: priority:M
+#    - Nice-to-have: priority:L
+
+# 5. Use description_template to customize task descriptions
+#    - GitHub: {{githubtitle}}
+#    - Include issue number: {{githubtitle}} (#{{githubnumber}})
+#    - Add context: [{{githubrepo}}] {{githubtitle}}
+
+# 6. Regular syncing
+#    - Run bugwarrior-pull daily (or use systemd timer)
+#    - Clean up closed issues periodically
+#    - Review and organize imported tasks
+
+# ============================================================================
+# Troubleshooting
+# ============================================================================
+
+# Issue: No tasks imported
+# - Check log.file for errors
+# - Verify authentication tokens
+# - Test with bugwarrior-pull --dry-run
+# - Check your query/filter settings
+
+# Issue: Too many tasks imported
+# - Add more restrictive queries
+# - Use include_repos to limit repositories
+# - Filter by labels or status
+# - Set up multiple targets with different filters
+
+# Issue: Authentication failures
+# - Verify tokens are still valid
+# - Check token scopes/permissions
+# - Try re-generating tokens
+# - For GitHub: gh auth status
+
+# Issue: Duplicate tasks
+# - BugWarrior uses UUIDs to prevent duplicates
+# - If you see duplicates, delete one manually
+# - Check if you have multiple targets for same service
