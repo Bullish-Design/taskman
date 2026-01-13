@@ -2,13 +2,19 @@
 
 {
   # https://devenv.sh/basics/
-  env.GREET = "devenv";
+  env.GREET = "TaskMan";
 
   # https://devenv.sh/packages/
-  packages = [ pkgs.git ];
+  packages = with pkgs; [ 
+    git 
+    taskwarrior3
+    vit
+    tasksh
+  ];
 
   # https://devenv.sh/languages/
   # languages.rust.enable = true;
+  languages.go.enable = true;
 
   # https://devenv.sh/processes/
   # processes.dev.exec = "${lib.getExe pkgs.watchexec} -n -- ls -la";
@@ -19,12 +25,16 @@
   # https://devenv.sh/scripts/
   scripts.hello.exec = ''
     echo hello from $GREET
+    echo
   '';
 
   # https://devenv.sh/basics/
   enterShell = ''
     hello         # Run scripts directly
     git --version # Use packages
+    echo
+    task --version
+    echo
   '';
 
   # https://devenv.sh/tasks/
