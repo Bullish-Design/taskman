@@ -1,6 +1,18 @@
 # Ignore build outputs from performing a nix-build or `nix build` command
 result
 result-*
+devenv.lock
 
 # Ignore automatically generated direnv output
 .direnv
+
+# Devenv
+.devenv*
+devenv.local.nix
+devenv.local.yaml
+
+# direnv
+.direnv
+
+# pre-commit
+.pre-commit-config.yaml
