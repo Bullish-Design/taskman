@@ -1,5 +1,10 @@
 { pkgs, lib, config, inputs, ... }:
 
+
+let
+  # Import the taskman Python package using uv2nix
+  taskman-pkg = config.languages.python.import ./. { };
+in
 {
   # https://devenv.sh/basics/
   env.GREET = "TaskMan";
@@ -10,15 +15,18 @@
     taskwarrior3
     vit
     tasksh
+    taskman-pkg
   ];
 
-  # https://devenv.sh/languages/
-  # languages.rust.enable = true;
-  #languages.go.enable = true;
-  
-  languages.python.enable = true;
 
-  # https://devenv.sh/processes/
+  languages.python = {
+    enable = true;
+    version = "3.13";
+    venv.enable = true;
+    uv.enable = true;
+  };
+
+    # https://devenv.sh/processes/
   # processes.dev.exec = "${lib.getExe pkgs.watchexec} -n -- ls -la";
 
   # https://devenv.sh/services/
@@ -54,5 +62,8 @@
   # https://devenv.sh/git-hooks/
   # git-hooks.hooks.shellcheck.enable = true;
 
+  outputs = {
+    inherit taskman-pkg;
+  };
   # See full reference at https://devenv.sh/reference/options/
 }
