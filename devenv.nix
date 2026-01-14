@@ -3,7 +3,7 @@
 
 let
   # Import the taskman Python package using uv2nix
-  taskman-pkg = config.languages.python.import ./. { };
+  taskman = config.languages.python.import ./. { };
 in
 {
   # https://devenv.sh/basics/
@@ -15,7 +15,7 @@ in
     taskwarrior3
     vit
     tasksh
-    taskman-pkg
+    taskman
   ];
 
 
@@ -63,7 +63,7 @@ in
   # git-hooks.hooks.shellcheck.enable = true;
 
   outputs = {
-    inherit taskman-pkg;
+    inherit taskman;
   };
   # See full reference at https://devenv.sh/reference/options/
 }
