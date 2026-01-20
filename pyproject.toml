@@ -1,13 +1,17 @@
 # pyproject.toml
 [project]
 name = "taskman"
-version = "0.1.0"
-description = "Python CLI wrapper for TaskWarrior"
+version = "0.2.0"
+description = "TaskMan: Orchestration + safety layer for Taskwarrior with LLM integration"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    "taskdantic @ git+https://github.com/Bullish-Design/taskdantic",
     "typer>=0.12.0",
     "rich>=13.7.0",
+    "llm>=0.15.0",
+    "pydantic>=2.0.0",
+    "pydantic-settings>=2.0.0",
 ]
 
 [project.scripts]
@@ -18,4 +22,31 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.uv]
-dev-dependencies = []
+dev-dependencies = [
+    "pytest>=8.0.0",
+    "pytest-cov>=4.1.0",
+    "mypy>=1.8.0",
+    "ruff>=0.1.0",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP"]
+ignore = []
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = "-v --cov=taskman --cov-report=term-missing"
