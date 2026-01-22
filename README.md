@@ -37,7 +37,7 @@
 
 - Python 3.11+
 - [Taskwarrior](https://taskwarrior.org/) installed
-- [uv](https://github.com/astral-sh/uv) (recommended) or pip
+- [uv](https://github.com/astral-sh/uv) (recommended)
 
 ### Install from source
 

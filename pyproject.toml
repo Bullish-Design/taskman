@@ -6,7 +6,8 @@ description = "TaskMan: Orchestration + safety layer for Taskwarrior with LLM in
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "taskdantic @ git+https://github.com/Bullish-Design/taskdantic",
+    "taskdantic @ git+https://github.com/Bullish-Design/taskdantic@7ede3e99627bed931ef5d78086d113cc289a851b",   # dev",
+    #"taskdantic @ file:../taskdantic",
     "typer>=0.12.0",
     "rich>=13.7.0",
     "llm>=0.15.0",
@@ -17,12 +18,23 @@ dependencies = [
 [project.scripts]
 taskman = "taskman.cli:app"
 
+#[build-system]
+#requires = ["uv_build>=0.9.26,<0.10.0"]
+#build-backend = "uv_build"
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
-[tool.uv]
-dev-dependencies = [
+[tool.uv.extra-build-dependencies]
+taskdantic = ["hatchling"]
+
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[project.optional-dependencies]
+dev = [
     "pytest>=8.0.0",
     "pytest-cov>=4.1.0",
     "mypy>=1.8.0",

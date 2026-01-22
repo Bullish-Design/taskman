@@ -8,6 +8,8 @@ in
 {
   # https://devenv.sh/basics/
   env.GREET = "TaskMan";
+  
+  dotenv.enable = true;
 
   # https://devenv.sh/packages/
   packages = with pkgs; [ 
@@ -18,13 +20,24 @@ in
     taskman
     jq
   ];
-
+  
+  #packages = [
+  #  pkgs.git 
+  #  pkgs.taskwarrior3
+  #  pkgs.vit
+  #  pkgs.tasksh
+  #  taskman
+  #  pkgs.jq
+  #  pkgs.python313Packages.hatchling
+  #  #config.languages.python.package.pkgs.hatchling
+  #];
 
   languages.python = {
     enable = true;
     version = "3.13";
     venv.enable = true;
     uv.enable = true;
+    #libraries = [hatchling];  
   };
 
     # https://devenv.sh/processes/
@@ -35,6 +48,9 @@ in
 
   # https://devenv.sh/scripts/
   scripts.hello.exec = ''
+    echo
+    echo ------------------------------------------------
+    echo
     echo hello from $GREET
     echo
   '';
