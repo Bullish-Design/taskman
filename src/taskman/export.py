@@ -6,7 +6,7 @@ import json
 import subprocess
 from typing import Any
 
-from pydantic import BaseModel
+from taskdantic.models import Task as TDTask
 
 from taskman.config import get_config
 
@@ -19,66 +19,32 @@ class SelectorResolutionError(Exception):
     """Error resolving a selector to UUID."""
 
 
-class Task(BaseModel):
-    """Simplified task model for TaskMan operations.
-
-    This is a lightweight model for tasks exported from Taskwarrior.
-    For full Taskdantic integration, we'll use their models where appropriate.
-    """
-
-    id: int | None = None
-    uuid: str
-    description: str
-    status: str
-    entry: str
-    modified: str | None = None
-    project: str | None = None
-    tags: list[str] = []
-    priority: str | None = None
-    due: str | None = None
-    until: str | None = None
-    wait: str | None = None
-    scheduled: str | None = None
-    depends: list[str] = []
-    annotations: list[dict[str, Any]] = []
-    urgency: float = 0.0
-
-    # Store any additional fields (including UDAs)
-    uda: dict[str, Any] = {}
-
-    class Config:
-        extra = "allow"  # Allow extra fields for UDAs
-
-    def model_post_init(self, __context: Any) -> None:
-        """Post-initialization to capture UDAs."""
-        # Capture any extra fields as UDAs
-        known_fields = {
-            "id",
-            "uuid",
-            "description",
-            "status",
-            "entry",
-            "modified",
-            "project",
-            "tags",
-            "priority",
-            "due",
-            "until",
-            "wait",
-            "scheduled",
-            "depends",
-            "annotations",
-            "urgency",
-            "uda",
-        }
-        for field_name in dir(self):
-            if not field_name.startswith("_") and field_name not in known_fields:
-                value = getattr(self, field_name, None)
-                if value is not None:
-                    self.uda[field_name] = value
+Task = TDTask
 
 
-def export_tasks(filter_expr: str | None = None) -> list[Task]:
+def parse_task(raw: dict[str, Any]) -> TDTask:
+    """Parse a raw task dict into a Taskdantic Task."""
+    return TDTask.model_validate(raw)
+
+
+def get_task_udas(task: TDTask) -> dict[str, Any]:
+    """Extract UDAs from a Taskdantic Task using known storage locations."""
+    udas = getattr(task, "udas", None)
+    if isinstance(udas, dict):
+        return udas
+
+    uda = getattr(task, "uda", None)
+    if isinstance(uda, dict):
+        return uda
+
+    model_extra = getattr(task, "model_extra", None)
+    if isinstance(model_extra, dict):
+        return model_extra
+
+    return {}
+
+
+def export_tasks(filter_expr: str | None = None) -> list[TDTask]:
     """Export tasks from Taskwarrior.
 
     Args:
@@ -115,16 +81,10 @@ def export_tasks(filter_expr: str | None = None) -> list[Task]:
     except json.JSONDecodeError as e:
         raise TaskExportError(f"Failed to parse task JSON: {e}") from e
 
-    tasks = []
-    for item in data:
-        # Handle UDA fields by extracting known vs unknown
-        task_dict = {k: v for k, v in item.items()}
-        tasks.append(Task(**task_dict))
-
-    return tasks
+    return [parse_task(item) for item in data]
 
 
-def export_single_task(selector: str) -> Task:
+def export_single_task(selector: str) -> TDTask:
     """Export a single task by selector.
 
     Args:
@@ -215,7 +175,7 @@ def normalize_depends(depends: list[str] | str) -> list[str]:
     return resolve_selectors(dep_list)
 
 
-def task_to_prompt_format(task: Task) -> str:
+def task_to_prompt_format(task: TDTask) -> str:
     """Format a task for inclusion in LLM prompts.
 
     Args:
@@ -224,43 +184,36 @@ def task_to_prompt_format(task: Task) -> str:
     Returns:
         Formatted string representation
     """
+    uuid = getattr(task, "uuid", "")
+    description = getattr(task, "description", "")
+    project = getattr(task, "project", None)
+    tags = list(getattr(task, "tags", []) or [])
+    depends = list(getattr(task, "depends", []) or [])
+    annotations = list(getattr(task, "annotations", []) or [])
+    udas = get_task_udas(task)
+
     lines = [
-        f"UUID: {task.uuid}",
-        f"Description: {task.description}",
-        f"Status: {task.status}",
+        f"UUID: {uuid}",
+        f"Description: {description}",
     ]
 
-    if task.project:
-        lines.append(f"Project: {task.project}")
+    if project:
+        lines.append(f"Project: {project}")
 
-    if task.tags:
-        lines.append(f"Tags: {', '.join(task.tags)}")
+    if tags:
+        lines.append(f"Tags: {', '.join(tags)}")
 
-    if task.priority:
-        lines.append(f"Priority: {task.priority}")
+    if depends:
+        lines.append(f"Depends: {', '.join(depends)}")
 
-    if task.due:
-        lines.append(f"Due: {task.due}")
-
-    if task.wait:
-        lines.append(f"Wait: {task.wait}")
-
-    if task.scheduled:
-        lines.append(f"Scheduled: {task.scheduled}")
-
-    if task.depends:
-        lines.append(f"Depends: {', '.join(task.depends)}")
-
-    # Add UDAs
-    if task.uda:
+    if udas:
         lines.append("\nUser Defined Attributes:")
-        for key, value in sorted(task.uda.items()):
+        for key, value in sorted(udas.items()):
             lines.append(f"  {key}: {value}")
 
-    # Add annotations
-    if task.annotations:
+    if annotations:
         lines.append("\nAnnotations:")
-        for ann in task.annotations:
+        for ann in annotations:
             entry = ann.get("entry", "")
             desc = ann.get("description", "")
             lines.append(f"  [{entry}] {desc}")
