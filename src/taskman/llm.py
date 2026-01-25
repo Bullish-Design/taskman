@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 from taskman.config import get_config
 from taskman.export import Task, task_to_prompt_format
 from taskman.policy import Policy
-from taskman.uda import UDARegistry
+from taskman.uda import format_uda_prompt_reference, get_uda_names
 
 
 class AnalysisResult(BaseModel):
@@ -65,7 +65,7 @@ class BatchAnalysisResult(BaseModel):
 class PromptBuilder:
     """Builder for LLM prompts."""
 
-    def __init__(self, registry: UDARegistry | None = None, policy: Policy | None = None):
+    def __init__(self, registry: Any | None = None, policy: Policy | None = None):
         """Initialize prompt builder.
 
         Args:
@@ -98,7 +98,7 @@ class PromptBuilder:
             sections.extend(
                 [
                     "## Available UDAs",
-                    self.registry.to_prompt_reference(),
+                    format_uda_prompt_reference(self.registry),
                     "",
                 ]
             )
@@ -139,7 +139,7 @@ class PromptBuilder:
             sections.extend(
                 [
                     "## Available UDAs",
-                    self.registry.to_prompt_reference(),
+                    format_uda_prompt_reference(self.registry),
                     "",
                 ]
             )
@@ -149,7 +149,7 @@ class PromptBuilder:
                 [
                     "## Safety Policy",
                     f"Mode: {self.policy.mode.value}",
-                    f"Allowed fields: {self.policy.get_allowed_fields_description(self.registry.get_names() if self.registry else None)}",
+                    f"Allowed fields: {self.policy.get_allowed_fields_description(get_uda_names(self.registry))}",
                     "",
                     "Forbidden operations:",
                     "- Modifying task description",
@@ -230,7 +230,7 @@ class PromptBuilder:
             sections.extend(
                 [
                     "## Available UDAs",
-                    self.registry.to_prompt_reference(),
+                    format_uda_prompt_reference(self.registry),
                     "",
                 ]
             )
@@ -269,7 +269,7 @@ class PromptBuilder:
 
 def analyze_task(
     task: Task,
-    registry: UDARegistry | None = None,
+    registry: Any | None = None,
     policy: Policy | None = None,
 ) -> AnalysisResult:
     """Analyze a task using LLM.
@@ -310,7 +310,7 @@ def analyze_task(
 
 def revise_task(
     task: Task,
-    registry: UDARegistry | None = None,
+    registry: Any | None = None,
     policy: Policy | None = None,
 ) -> ReviseOutput:
     """Generate a revise script for a task using LLM.
@@ -350,7 +350,7 @@ def revise_task(
 
 def batch_analyze(
     tasks: list[Task],
-    registry: UDARegistry | None = None,
+    registry: Any | None = None,
     policy: Policy | None = None,
     global_invariants: dict[str, Any] | None = None,
 ) -> BatchAnalysisResult:
