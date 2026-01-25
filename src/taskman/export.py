@@ -4,11 +4,16 @@ from __future__ import annotations
 
 import json
 import subprocess
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from pydantic import BaseModel
 
 from taskman.config import get_config
+
+if TYPE_CHECKING:
+    from taskdantic import Task as TaskdanticTask
+else:
+    TaskdanticTask = Any
 
 
 class TaskExportError(Exception):
@@ -215,7 +220,7 @@ def normalize_depends(depends: list[str] | str) -> list[str]:
     return resolve_selectors(dep_list)
 
 
-def task_to_prompt_format(task: Task) -> str:
+def task_to_prompt_format(task: Task | TaskdanticTask) -> str:
     """Format a task for inclusion in LLM prompts.
 
     Args:

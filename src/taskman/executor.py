@@ -4,11 +4,16 @@ from __future__ import annotations
 
 import subprocess
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from taskman.config import get_config
-from taskman.export import export_single_task, Task
+from taskman.export import export_single_task
 from taskman.parser import CommandAST, command_to_string
+
+if TYPE_CHECKING:
+    from taskdantic import Task as TaskdanticTask
+else:
+    TaskdanticTask = Any
 
 
 class ExecutionError(Exception):
@@ -263,7 +268,7 @@ class CommandExecutor:
 
     def _compute_field_diff(
         self,
-        task: Task,
+        task: TaskdanticTask,
         field: str,
         operation: str,
         value: Any,
