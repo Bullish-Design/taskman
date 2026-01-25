@@ -1,267 +1,131 @@
-"""UDA operations - wrapper around Taskdantic functionality."""
+"""UDA operations backed by Taskdantic."""
 
 from __future__ import annotations
 
+import inspect
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
-from pydantic import BaseModel
-
-
-class UDASpec(BaseModel):
-    """Specification for a User Defined Attribute.
-
-    This is a simplified version for TaskMan's needs.
-    The actual implementation will use Taskdantic's UDA models.
-    """
-
-    name: str
-    type: str  # string, numeric, date, duration
-    label: str | None = None
-    values: list[str] | None = None  # For enumerated types
-    default: str | None = None
-    urgent: float | None = None
-    help: str | None = None
+from taskdantic import uda as taskdantic_uda
 
 
-class UDARegistry:
-    """Registry of User Defined Attributes.
-
-    This wraps Taskdantic's UDA registry functionality.
-    """
-
-    def __init__(self) -> None:
-        """Initialize registry."""
-        self.udas: dict[str, UDASpec] = {}
-
-    def register(self, uda: UDASpec) -> None:
-        """Register a UDA.
-
-        Args:
-            uda: UDA specification
-        """
-        self.udas[uda.name] = uda
-
-    def get(self, name: str) -> UDASpec | None:
-        """Get a UDA by name.
-
-        Args:
-            name: UDA name
-
-        Returns:
-            UDA spec or None
-        """
-        return self.udas.get(name)
-
-    def get_names(self) -> set[str]:
-        """Get all UDA names.
-
-        Returns:
-            Set of UDA names
-        """
-        return set(self.udas.keys())
-
-    def to_taskrc_config(self) -> str:
-        """Generate taskrc configuration for all UDAs.
-
-        Returns:
-            Taskrc configuration block
-        """
-        lines = ["# User Defined Attributes (managed by TaskMan)", ""]
-
-        for name, uda in sorted(self.udas.items()):
-            # Type
-            lines.append(f"uda.{name}.type={uda.type}")
-
-            # Label
-            if uda.label:
-                lines.append(f"uda.{name}.label={uda.label}")
-
-            # Values (for enumerated types)
-            if uda.values:
-                lines.append(f"uda.{name}.values={','.join(uda.values)}")
-
-            # Default
-            if uda.default:
-                lines.append(f"uda.{name}.default={uda.default}")
-
-            # Urgency
-            if uda.urgent is not None:
-                lines.append(f"urgency.uda.{name}.coefficient={uda.urgent}")
-
-            lines.append("")  # Blank line between UDAs
-
-        return "\n".join(lines)
-
-    def to_prompt_reference(self) -> str:
-        """Generate a prompt-friendly reference of all UDAs.
-
-        Returns:
-            Human-readable UDA reference
-        """
-        if not self.udas:
-            return "No UDAs defined."
-
-        lines = ["Available User Defined Attributes:", ""]
-
-        for name, uda in sorted(self.udas.items()):
-            desc = f"- {name} ({uda.type})"
-            if uda.label:
-                desc += f" - {uda.label}"
-            lines.append(desc)
-
-            if uda.help:
-                lines.append(f"  {uda.help}")
-
-            if uda.values:
-                lines.append(f"  Allowed values: {', '.join(uda.values)}")
-
-            if uda.default:
-                lines.append(f"  Default: {uda.default}")
-
-            lines.append("")
-
-        return "\n".join(lines)
-
-    @classmethod
-    def from_models(cls, model_paths: list[str]) -> UDARegistry:
-        """Build a UDA registry from Taskdantic model modules.
-
-        Args:
-            model_paths: List of Python module paths
-
-        Returns:
-            UDARegistry instance
-
-        Note:
-            This is a placeholder. The actual implementation will use
-            Taskdantic's UDA discovery and registry functionality.
-        """
-        registry = cls()
-
-        # TODO: Integrate with Taskdantic's UDA discovery
-        # For now, return empty registry
-        # The actual implementation will:
-        # 1. Import modules from model_paths
-        # 2. Use Taskdantic's UDA discovery to find UDA models
-        # 3. Convert to UDASpec and register
-
-        return registry
+def _resolve_callable(names: list[str]) -> Callable[..., Any]:
+    for name in names:
+        candidate = getattr(taskdantic_uda, name, None)
+        if callable(candidate):
+            return candidate
+    raise AttributeError(
+        "Taskdantic UDA API did not expose an expected helper: "
+        f"{', '.join(names)}"
+    )
 
 
-def build_uda_registry(model_paths: list[str]) -> UDARegistry:
-    """Build a UDA registry from model paths.
+def _call_with_paths(func: Callable[..., Any], model_paths: list[str]) -> Any:
+    signature = inspect.signature(func)
+    params = list(signature.parameters.values())
+    if not params:
+        return func()
+    if len(params) == 1:
+        return func(model_paths)
+    kwargs: dict[str, Any] = {}
+    for param in params:
+        if param.name in {"model_paths", "module_paths", "modules", "paths"}:
+            kwargs[param.name] = model_paths
+    if kwargs:
+        return func(**kwargs)
+    return func(model_paths)
 
-    Args:
-        model_paths: List of Python module paths to discover UDAs from
 
-    Returns:
-        UDARegistry instance
-    """
-    return UDARegistry.from_models(model_paths)
+def _call_taskrc_writer(
+    func: Callable[..., Any], registry: Any, out_path: Path
+) -> Any:
+    signature = inspect.signature(func)
+    params = list(signature.parameters.values())
+    if not params:
+        return func()
+    if len(params) == 1:
+        return func(registry)
+    if len(params) == 2:
+        return func(registry, out_path)
+    kwargs: dict[str, Any] = {}
+    for param in params:
+        if param.name in {"registry", "uda_registry", "udas"}:
+            kwargs[param.name] = registry
+        if param.name in {"out_path", "path", "output_path", "taskrc_path"}:
+            kwargs[param.name] = out_path
+    if kwargs:
+        return func(**kwargs)
+    return func(registry, out_path)
 
 
-def sync_udas(
-    registry: UDARegistry,
-    taskrc_path: Path | None = None,
-    out_path: Path | None = None,
-) -> None:
-    """Sync UDAs to taskrc configuration.
+def build_uda_registry(model_paths: list[str]) -> Any:
+    """Build a Taskdantic UDA registry from model module paths."""
+    builder = _resolve_callable(
+        [
+            "build_uda_registry",
+            "build_registry",
+            "discover_uda_registry",
+            "discover_registry",
+            "discover_udas",
+        ]
+    )
+    return _call_with_paths(builder, model_paths)
 
-    Args:
-        registry: UDA registry
-        taskrc_path: Path to main taskrc (for reference)
-        out_path: Path to write UDA config (defaults to ~/.taskrc-udas)
 
-    Note:
-        This writes to a separate file that should be included in taskrc:
-        include ~/.taskrc-udas
-    """
+def write_uda_taskrc(registry: Any, out_path: Path) -> None:
+    """Write a Taskdantic registry to a taskrc-compatible file."""
+    writer = _resolve_callable(
+        [
+            "write_uda_taskrc",
+            "write_taskrc",
+            "write_taskrc_config",
+            "export_taskrc",
+            "export_taskrc_config",
+            "render_taskrc_config",
+        ]
+    )
+    result = _call_taskrc_writer(writer, registry, out_path)
+    if isinstance(result, str):
+        out_path.write_text(result)
+
+
+def sync_udas(registry: Any, out_path: Path | None = None) -> None:
+    """Sync Taskdantic UDAs to a taskrc configuration file."""
     if out_path is None:
         out_path = Path.home() / ".taskrc-udas"
-
-    # Generate config
-    config = registry.to_taskrc_config()
-
-    # Write to file
-    out_path.write_text(config)
-    print(f"UDA configuration written to: {out_path}")
-    print(f"\nEnsure your taskrc includes this file:")
-    print(f"  include {out_path}")
+    write_uda_taskrc(registry, out_path)
 
 
-def create_example_registry() -> UDARegistry:
-    """Create an example UDA registry for testing/demonstration.
+def get_uda_names(registry: Any) -> set[str]:
+    """Extract UDA names from a Taskdantic registry."""
+    if registry is None:
+        return set()
+    for attr in ("get_names", "names", "uda_names"):
+        value = getattr(registry, attr, None)
+        if callable(value):
+            return set(value())
+        if value:
+            return set(value)
+    udas = getattr(registry, "udas", None)
+    if isinstance(udas, dict):
+        return set(udas.keys())
+    if hasattr(registry, "__iter__"):
+        return {getattr(item, "name") for item in registry if hasattr(item, "name")}
+    return set()
 
-    Returns:
-        UDARegistry with example UDAs
-    """
-    registry = UDARegistry()
 
-    # Example UDAs from the spec
-    registry.register(
-        UDASpec(
-            name="context",
-            type="string",
-            label="Context",
-            help="The context or location where this task should be done",
-        )
-    )
-
-    registry.register(
-        UDASpec(
-            name="why",
-            type="string",
-            label="Why",
-            help="The reason or motivation for this task",
-        )
-    )
-
-    registry.register(
-        UDASpec(
-            name="stakeholder",
-            type="string",
-            label="Stakeholder",
-            help="Who cares about or benefits from this task",
-        )
-    )
-
-    registry.register(
-        UDASpec(
-            name="waiting_on",
-            type="string",
-            label="Waiting On",
-            help="What or who this task is blocked by",
-        )
-    )
-
-    registry.register(
-        UDASpec(
-            name="next_action",
-            type="string",
-            label="Next Action",
-            help="The very next physical action to move this forward",
-        )
-    )
-
-    registry.register(
-        UDASpec(
-            name="impact",
-            type="string",
-            label="Impact",
-            values=["low", "medium", "high", "critical"],
-            help="Expected impact of completing this task",
-        )
-    )
-
-    registry.register(
-        UDASpec(
-            name="effort",
-            type="string",
-            label="Effort",
-            values=["trivial", "small", "medium", "large", "huge"],
-            help="Estimated effort required",
-        )
-    )
-
-    return registry
+def format_uda_prompt_reference(registry: Any) -> str:
+    """Render a prompt-friendly UDA reference."""
+    if registry is None:
+        return "No UDAs defined."
+    if hasattr(registry, "to_prompt_reference"):
+        return registry.to_prompt_reference()
+    formatter = getattr(taskdantic_uda, "format_prompt_reference", None)
+    if callable(formatter):
+        return formatter(registry)
+    names = sorted(get_uda_names(registry))
+    if not names:
+        return "No UDAs defined."
+    lines = ["Available User Defined Attributes:", ""]
+    lines.extend(f"- {name}" for name in names)
+    return "\n".join(lines)

@@ -19,10 +19,10 @@ from taskman.parser import parse_revise_script, CommandAST
 from taskman.policy import Policy, PolicyMode, get_policy
 from taskman.uda import (
     build_uda_registry,
+    format_uda_prompt_reference,
+    get_uda_names,
     sync_udas,
-    UDARegistry,
-    UDASpec,
-    create_example_registry,
+    write_uda_taskrc,
 )
 from taskman.validator import validate_commands, ValidationResult
 
@@ -54,10 +54,10 @@ __all__ = [
     "get_policy",
     # UDA
     "build_uda_registry",
+    "format_uda_prompt_reference",
+    "get_uda_names",
     "sync_udas",
-    "UDARegistry",
-    "UDASpec",
-    "create_example_registry",
+    "write_uda_taskrc",
     # LLM
     "analyze_task",
     "batch_analyze",
