@@ -921,8 +921,8 @@ wheels = [
 
 [[package]]
 name = "taskdantic"
-version = "0.1.6"
-source = { git = "https://github.com/Bullish-Design/taskdantic?rev=b3af2c127ede448ca5c467c8faa75f208ae85ec9#b3af2c127ede448ca5c467c8faa75f208ae85ec9" }
+version = "0.1.9"
+source = { git = "https://github.com/Bullish-Design/taskdantic?rev=aa1a418#aa1a41801648971c153d9b13dcc8c4a332272e4e" }
 dependencies = [
     { name = "pydantic" },
     { name = "python-dotenv" },
@@ -961,7 +961,7 @@ requires-dist = [
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=4.1.0" },
     { name = "rich", specifier = ">=13.7.0" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.1.0" },
-    { name = "taskdantic", git = "https://github.com/Bullish-Design/taskdantic?rev=b3af2c127ede448ca5c467c8faa75f208ae85ec9" },
+    { name = "taskdantic", git = "https://github.com/Bullish-Design/taskdantic?rev=aa1a418" },
     { name = "typer", specifier = ">=0.12.0" },
 ]
 provides-extras = ["dev"]
