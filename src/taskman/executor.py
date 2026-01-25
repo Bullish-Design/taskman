@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 from typing import Any, TYPE_CHECKING
 
 from taskman.config import get_config
-from taskman.export import export_single_task
+from taskman.export import export_single_task, get_task_udas, Task
 from taskman.parser import CommandAST, command_to_string
 
 if TYPE_CHECKING:
@@ -294,8 +294,8 @@ class CommandExecutor:
         else:
             # For other fields, show before/after
             current = getattr(task, field, None)
-            if current is None and task.uda:
-                current = task.uda.get(field)
+            if current is None:
+                current = get_task_udas(task).get(field)
 
             if operation == "set":
                 diff.add_change(field, current, value)

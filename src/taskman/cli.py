@@ -19,7 +19,7 @@ from taskman.export import export_single_task, export_tasks, TaskExportError
 from taskman.llm import analyze_task, batch_analyze, revise_task
 from taskman.parser import parse_revise_script, ParseError
 from taskman.policy import get_policy, Policy
-from taskman.uda import build_uda_registry, sync_udas, create_example_registry
+from taskman.uda import build_uda_registry, get_uda_names, sync_udas
 from taskman.validator import validate_commands, ValidationError
 
 app = typer.Typer(
@@ -43,11 +43,6 @@ def sync_udas_cmd(
         "-o",
         help="Output path for UDA config (default: ~/.taskrc-udas)",
     ),
-    use_example: bool = typer.Option(
-        False,
-        "--example",
-        help="Use example UDAs for demonstration",
-    ),
 ) -> None:
     """Sync Taskdantic-defined UDAs into taskrc configuration.
 
@@ -57,25 +52,21 @@ def sync_udas_cmd(
     console.print("[bold blue]TaskMan UDA Sync[/bold blue]\n")
 
     try:
-        if use_example:
-            console.print("[yellow]Using example UDAs for demonstration[/yellow]")
-            registry = create_example_registry()
-        else:
-            config = get_config()
-            paths = model_paths or config.uda_models_modules
+        config = get_config()
+        paths = model_paths or config.uda_models_modules
 
-            if not paths:
-                console.print(
-                    "[red]Error:[/red] No model paths specified. "
-                    "Use --model or set TASKMAN_UDA_MODELS_MODULES",
-                    file=sys.stderr,
-                )
-                raise typer.Exit(1)
+        if not paths:
+            console.print(
+                "[red]Error:[/red] No model paths specified. "
+                "Use --model or set TASKMAN_UDA_MODELS_MODULES",
+                file=sys.stderr,
+            )
+            raise typer.Exit(1)
 
-            console.print(f"Discovering UDAs from: {', '.join(paths)}")
-            registry = build_uda_registry(paths)
+        console.print(f"Discovering UDAs from: {', '.join(paths)}")
+        registry = build_uda_registry(paths)
 
-        console.print(f"Found {len(registry.get_names())} UDAs")
+        console.print(f"Found {len(get_uda_names(registry))} UDAs")
 
         # Sync to file
         out_path = output or get_config().uda_config_file
@@ -110,7 +101,7 @@ def analyze(
 
         # Get policy and registry
         policy = get_policy(mode)
-        registry = create_example_registry()  # TODO: Load from config
+        registry = _load_uda_registry(config)
 
         # Export task
         console.print(f"Exporting task: {selector}")
@@ -186,7 +177,7 @@ def revise(
 
         # Get policy and registry
         policy = get_policy(mode)
-        registry = create_example_registry()  # TODO: Load from config
+        registry = _load_uda_registry(config)
 
         # Export task
         console.print(f"Exporting task: {selector}")
@@ -226,7 +217,7 @@ def revise(
 
         # Validate
         console.print("[bold]Validating commands...[/bold]")
-        validation = validate_commands(commands, policy, registry.get_names())
+        validation = validate_commands(commands, policy, get_uda_names(registry))
 
         if not validation.is_valid:
             console.print(f"[red]Validation Failed:[/red]\n{validation.get_error_summary()}")
@@ -288,7 +279,7 @@ def batch_analyze_cmd(
 
         # Get policy and registry
         policy = get_policy(mode)
-        registry = create_example_registry()  # TODO: Load from config
+        registry = _load_uda_registry(config)
 
         # Export tasks
         console.print(f"Exporting tasks: {filter_expr}")
@@ -371,6 +362,12 @@ def _edit_in_editor(content: str, editor: str = "vim") -> str:
     finally:
         # Cleanup
         Path(temp_path).unlink(missing_ok=True)
+
+
+def _load_uda_registry(config: TaskManConfig) -> object | None:
+    if config.uda_models_modules:
+        return build_uda_registry(config.uda_models_modules)
+    return None
 
 
 if __name__ == "__main__":
