@@ -2,14 +2,19 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from pydantic import BaseModel, Field
 
 from taskman.config import get_config
-from taskman.export import Task, task_to_prompt_format
+from taskman.export import task_to_prompt_format
 from taskman.policy import Policy
 from taskman.uda import format_uda_prompt_reference, get_uda_names
+
+if TYPE_CHECKING:
+    from taskdantic import Task as TaskdanticTask
+else:
+    TaskdanticTask = Any
 
 
 class AnalysisResult(BaseModel):
@@ -75,7 +80,7 @@ class PromptBuilder:
         self.registry = registry
         self.policy = policy
 
-    def build_analyze_prompt(self, task: Task) -> str:
+    def build_analyze_prompt(self, task: TaskdanticTask) -> str:
         """Build a prompt for analyzing a task.
 
         Args:
@@ -116,7 +121,7 @@ class PromptBuilder:
 
         return "\n".join(sections)
 
-    def build_revise_prompt(self, task: Task) -> str:
+    def build_revise_prompt(self, task: TaskdanticTask) -> str:
         """Build a prompt for revising a task.
 
         Args:
@@ -196,7 +201,7 @@ class PromptBuilder:
 
     def build_batch_analyze_prompt(
         self,
-        tasks: list[Task],
+        tasks: list[TaskdanticTask],
         global_invariants: dict[str, Any] | None = None,
     ) -> str:
         """Build a prompt for batch analyzing tasks.
@@ -268,8 +273,8 @@ class PromptBuilder:
 
 
 def analyze_task(
-    task: Task,
-    registry: Any | None = None,
+    task: TaskdanticTask,
+    registry: UDARegistry | None = None,
     policy: Policy | None = None,
 ) -> AnalysisResult:
     """Analyze a task using LLM.
@@ -309,8 +314,8 @@ def analyze_task(
 
 
 def revise_task(
-    task: Task,
-    registry: Any | None = None,
+    task: TaskdanticTask,
+    registry: UDARegistry | None = None,
     policy: Policy | None = None,
 ) -> ReviseOutput:
     """Generate a revise script for a task using LLM.
@@ -349,8 +354,8 @@ def revise_task(
 
 
 def batch_analyze(
-    tasks: list[Task],
-    registry: Any | None = None,
+    tasks: list[TaskdanticTask],
+    registry: UDARegistry | None = None,
     policy: Policy | None = None,
     global_invariants: dict[str, Any] | None = None,
 ) -> BatchAnalysisResult:

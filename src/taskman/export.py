@@ -4,11 +4,16 @@ from __future__ import annotations
 
 import json
 import subprocess
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 from taskdantic.models import Task as TDTask
 
 from taskman.config import get_config
+
+if TYPE_CHECKING:
+    from taskdantic import Task as TaskdanticTask
+else:
+    TaskdanticTask = Any
 
 
 class TaskExportError(Exception):
